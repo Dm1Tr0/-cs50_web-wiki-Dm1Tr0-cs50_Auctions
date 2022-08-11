@@ -1,0 +1,15 @@
+{% extends "auctions/layout.html" %}
+
+{% block body %}
+    <h2>Browse By Category</h2>
+    <hr>
+    <ul class="list-group-flush p-0">
+        {% for category_elem in categories %}
+            <li class="list-group-item">
+                <a href="{% url 'category' category_elem.id %}">{{ category_elem }}</a>
+                <span class="badge badge-secondary badge-pill">{{ category.count_active_auctions }}</span>
+
+            </li>
+        {% endfor %}
+    </ul>
+{% endblock %}

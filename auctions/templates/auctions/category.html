@@ -1,13 +1,30 @@
 {% extends "auctions/layout.html" %}
 
 {% block body %}
-    <h2 style="text-align: center;">{{ title }}</h2>
+
+{% if categories %}
+    <h2 style="text-align: center;">Browse By Category</h2>
     <hr>
+
+    <ul class="list-group">
+        {% for category in categories %}
+            <li class="list-group-item">
+                <a href="{% url 'category' category.id %}">{{ category }}</a>
+                <span class="badge badge-secondary badge-pill">{{ category.count_active_auctions }}</span>
+            </li>
+        {% endfor %}
+    </ul>
+    <hr>
+{% endif %}
+
+    <h2 style="text-align: center;">Auctions of the {{ category_chousen.name }} cathegory</h2>
+    <hr>
+    
     <div class="d-flex flex-wrap">
         {% for auction in auctions %}
             <div class="card p-4 m-2 col-lg-3 col-md-4 col-sm-12">
                 <h4><a href="{% url 'auction' auction.id %}">{{ auction.item_name }}</a></h4>
-                {% if auction.image %}
+                {% if auction.image.url %}
                     <img src="{{ auction.image.url }}">
                 {% endif %}
                 <h5 class="my-2">
@@ -28,4 +45,5 @@
             </div>
         {% endfor %}
     </div>
+
 {% endblock %}

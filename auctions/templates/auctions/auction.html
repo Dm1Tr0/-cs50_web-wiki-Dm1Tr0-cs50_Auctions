@@ -1,0 +1,94 @@
+{% extends "auctions/layout.html" %}
+
+{% block title %} {{ auction.item_name }} {% endblock %}
+
+{% block body %}
+    <h1> {{ auction.item_name }} </h1>
+
+    {% if ended %}
+        <div><b>This auction has ended</b></div>
+    {% else %}
+        <div>Time Left: {{ days }}d {{ hours }}h {{ minutes }}m</div>
+        <div>Auction ends at: {{ auction.end_time }}</div>
+        <dif>
+            {% if auction.bids.all.count > 0 %}
+                the highest bid is 
+                {{ auction.bids.first.amount }} ₴
+            {% else %}
+                the start bid is 
+                {{ auction.start_bid }} ₴
+            {% endif %}
+    {% endif %}
+
+    {% if auction.image %}
+        <img class="my-2" src="{{ auction.image.url }}">
+    {% endif %}
+
+    <!-- Watchlist -->
+    {% if request.user.is_authenticated %}
+        <div class="my-2">
+
+        </div>
+    {% endif %}
+
+
+    <p> {{ auction.item_description }} </p>
+
+    <h3>
+        ₴
+        {% if auction.bids.all.count > 0 %}
+            {{ auction.bids.first.amount }}
+        {% else %}
+            {{ auction.start_bid }}
+        {% endif %}
+    </h3>
+
+
+    Bids: {{ auction.bids.all.count }}.
+    {% if auction.bids.first.user == request.user %}
+        {% if not ended %}
+            Your bid is the current bid.
+        {% else %}
+            <b>You won the auction!</b>
+        {% endif %}
+    {% endif %}
+
+    {% if request.user.is_authenticated and not ended %}
+    {% endif %}
+
+    <h3>Details</h3>
+    <ul>
+        <li>Listed by <b>{{ auction.user }}</b></li>
+        <li>
+            Category:
+            {% if auction.category %}
+                <a href="{% url 'category' auction.category.name %}">
+                    {{ auction.category.name}}
+                </a>
+            {% else %}
+                No category listed
+            {% endif %}
+        </li>
+    </ul>
+
+    <hr>
+
+    <div id="comments-section" class="bg-light">
+        <h3 class="py-4">Comments <span class="badge badge-secondary badge-pill mx-1">{{ auction.comments.count }}</span></h3>
+
+        {% if request.user.is_authenticated and not ended %}
+        {% endif %}
+        <div class="py-2">
+        {% for comment in auction.comments.all %}
+            <div class="card p-1 m-2 col-lg-12 col-sm-12">
+                <div class="card-body">
+                    <h5 class="card-title">{{ comment.user }}</h5>
+                    <h6 class="card-subtitle mb-2 text-muted">{{ comment.time }}</h6>
+                    {{ comment.message }}
+                </div>
+            </div>
+        {% endfor %}
+        </div>
+    </div>
+
+{% endblock %}
