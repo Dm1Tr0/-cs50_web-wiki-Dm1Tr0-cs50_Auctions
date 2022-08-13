@@ -1,4 +1,6 @@
 from datetime import datetime
+from email.mime import image
+import re
 from django.contrib.auth import authenticate, login, logout
 from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
@@ -9,18 +11,32 @@ from django.db.models import Q
 from django.forms import ModelForm, TextInput
 from django.utils import timezone
 
-
 from .models import Auction, Bid, Category, Comment, User
 
-#listing all active auctions 
+class AuctionForm(ModelForm):
+    class Meta:
+        model = Auction
+        fields = ['item_name',
+                  'image',
+                  'item_description',
+                  'start_bid',
+                  'duration',
+                  'category']
 
-def index(request):
-    active_auctions = Auction.objects.filter(ended_manually=False, end_time__gte=datetime.now())
+    def __init__(self, *args, **kwargs):
+        super(AuctionForm, self).__init__(*args, **kwargs)
+        for visible in self.visible_fields():
+            visible.field.widget.attrs['class'] = 'form-control'
 
-    return render(request, "auctions/index.html",{
-        "auctions": active_auctions,
-        "title": "Curently active"
-    })
+class CommentForm(ModelForm):
+
+    class Meta:
+        model = Comment
+        fields = ['message']
+
+    def __init__(self, *args, **kwargs):
+        super(CommentForm, self).__init__(*args, **kwargs)
+        self.visible_fields()[0].field.widget.attrs['class'] = 'form-control w-75 h-75'
 
 class BidForm(ModelForm):
     class Meta:
@@ -43,6 +59,64 @@ class CommentForm(ModelForm):
         self.visible_fields()[0].field.widget.attrs['class'] = 'form-control w-75 h-75'
 
 
+def auction_bid(request, id):
+    bid_form = BidForm(request.POST or None)
+
+    if bid_form.is_valid():
+        auction = Auction.objects.get(pk=id)
+        new_bid = bid_form.save(commit=False)
+        current_bids = Bid.objects.filter(auction=auction)
+        is_highest_bid = all(new_bid.amount > n.amount for n in current_bids)
+        is_valid_first_bid = new_bid.amount >= auction.start_bid
+
+        if is_highest_bid and is_valid_first_bid:
+            new_bid.auction = auction
+            new_bid.user = request.user
+            new_bid.save()
+
+    url = reverse('auction', kwargs={'id': id})
+    return HttpResponseRedirect(url)
+
+def auction_comment(request, id):
+    comment_form = CommentForm(request.POST or None)
+
+    if comment_form.is_valid():
+        new_comment = comment_form.save(commit=False)
+        new_comment.user = request.user
+        new_comment.auction = Auction.objects.get(pk=id)
+        new_comment.save()
+
+    url = reverse('auction', kwargs={'id': id})
+    return HttpResponseRedirect(url)
+
+def auction_close(request, id):
+    auction = Auction.objects.get(pk=id)
+    auction.ended_manually = True;
+    auction.save()
+
+    url = reverse('auction', kwargs={'id': id})
+    return HttpResponseRedirect(url)
+
+
+#listing all active auctions (not wathced)
+def index(request):
+    active_auctions = Auction.objects.filter(ended_manually=False, end_time__gte=datetime.now())
+    if request.user.is_authenticated:
+        active_auctions = active_auctions.exclude(pk__in=request.user.watchlist.all().values("pk"))
+    
+        print(active_auctions.values("image"))
+    return render(request, "auctions/index.html",{
+        "auctions": active_auctions,
+        "title": "Curently active"
+    })
+
+def wiev_watched(request):
+    wathced_auctions = request.user.watchlist.all()
+
+    return render(request, "auctions/index.html",{
+        "auctions": wathced_auctions,
+        "title": "Watched"
+    })
 
 def login_view(request):
     if request.method == "POST":
@@ -136,3 +210,33 @@ def auction(request, id):
     context["comment_form"] = CommentForm()
 
     return render(request, "auctions/auction.html", context)
+
+def watch_auction(request, id):
+    auction = Auction.objects.get(pk=id)
+    watched_auctions = request.user.watchlist
+    if auction in watched_auctions.all():
+        watched_auctions.remove(auction)
+    else:
+        watched_auctions.add(auction)
+
+    url = reverse('auction', kwargs={'id': id})
+    return HttpResponseRedirect(url)
+
+
+def create_auction(request):
+    form = AuctionForm(request.POST or None, request.FILES or None)
+    if form.is_valid():
+        new_listing = form.save(commit=False)
+        new_listing.user = request.user
+        new_listing.save()
+
+        url = reverse('auction', kwargs={'id': new_listing.id})
+        return HttpResponseRedirect(url)
+
+    else:
+        return render(request, "auctions/create_auction.html", {
+            'form': form
+        })
+    
+    
+

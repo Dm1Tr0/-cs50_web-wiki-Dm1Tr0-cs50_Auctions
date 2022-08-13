@@ -6,10 +6,13 @@
     <div class="d-flex flex-wrap">
         {% for auction in auctions %}
             <div class="card p-4 m-2 col-lg-3 col-md-4 col-sm-12">
-                <h4><a href="{% url 'auction' auction.id %}">{{ auction.item_name }}</a></h4>
+                <div style="width: 100%; margin-left: 5px; margin-right: 5px; text-align: center;">
+                    <h4><a href="{% url 'auction' auction.id %}" style="color: grey;">{{ auction.item_name }}</a></h4>
+                </div>
                 {% if auction.image %}
                     <img src="{{ auction.image.url }}">
                 {% endif %}
+
                 <h5 class="my-2">
                     {% if auction.bids.all.count > 0 %}
                         ₴ {{ auction.bids.first.amount }}
@@ -22,10 +25,24 @@
                 <small class="card-text muted">
                     Ends {{ auction.end_time }}
                 </small>
-                <a href="{% url 'category' auction.category.id %}"></a>
-                    <span class="badge badge-secondary badge-pill">{{ auction.category }}</span>
-                </a>
+
+                <ul class="nav nav-pills mb-3" id="pills-tab" role="tablist">
+                    <li class="nav-item" style="color: grey;">
+                        <a class="nav-link" id="pills-profile-tab" data-toggle="pill" href="#pills-profile" role="tab" aria-controls="pills-profile" aria-selected="false" style="color: grey;">{{ auction.category }}</a>
+                    </li>
+                    {% if auction in request.user.watchlist.all %}
+                        <li class="nav-item">
+                            <a class="nav-link" id="pills-contact-tab" data-toggle="pill" href="{% url 'watch_auction' auction.id %}" role="tab" aria-controls="pills-contact" aria-selected="false" style="color: grey;">Unwatch</a>
+                        </li>
+                    {% endif %}
+                </ul>
             </div>
+        {% empty %}
+
+        <div class="alert alert-secondary" role="alert" style="text-align: center; margin-left: 20px; margin-right: 20px; width: 100%;">
+            You are not viewing any auction yet, please press wathc button on the auction page to watch it.
+        </div>
+
         {% endfor %}
     </div>
 {% endblock %}
